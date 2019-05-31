@@ -1,0 +1,20 @@
+# This file describes the network interfaces available on your system
+# For more information, see netplan(5).
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    eth0:
+      dhcp4: no
+
+  vlans:
+    eth0.{{ vm_network_vlan }}:
+      id: {{ vm_network_vlan }}
+      link: eth0
+      dhcp4: no
+      addresses:
+          - {{ vm_ip }}/24
+      gateway4: {{ vm_ip_short }}.254
+      nameservers:
+          search: [{{ vm_domain_name }}]
+          addresses: [{{ vm_dns_server }}]

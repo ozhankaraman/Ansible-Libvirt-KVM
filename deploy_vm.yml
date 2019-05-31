@@ -1,0 +1,106 @@
+---
+- hosts: fabrika
+  gather_facts: False
+
+  vars_files:
+    - variables.yml
+
+  tasks:
+    - name: Make sure that we can connect to the machine
+      ping:
+
+    - name: Query IP Address for {{ vm_name }}.{{ vm_domain_name }}
+      set_fact: vm_ip="{{ lookup('dig', '{{ vm_name }}.{{ vm_domain_name }}/A') }}"
+
+    - name: Parse IP Address for Short IP
+      set_fact: vm_ip_short="{{ vm_ip.split('.')[0:3] | join('.') }}"
+
+    - name: list all VMs {{ vm_ip_kisa }}
+      virt:
+        command: list_vms
+      register: all_vms
+
+    - name: Is Clean Up Required
+      set_fact:
+        vm_cleanup: "{{ all_vms.list_vms | select('match', vm_name) | list}}"
+
+    #- debug:
+    #    var: all_vms.list_vms
+
+    #- debug:
+    #    var: vm_cleanup
+
+    - name: stop vm {{ vm_name }}
+      virt:
+        name: "{{ vm_name }}"
+        state: destroyed
+      when: vm_cleanup.0 is defined
+
+    - name: undefine vm {{ vm_name }} 
+      virt: 
+        name: "{{ vm_name }}"
+        command: undefine
+      when: vm_cleanup.0 is defined
+
+    - name: Create vm base directory if it does not exist
+      file:
+        path: "{{ vm_dir }}/{{ vm_name }}"
+        state: directory
+        mode: '0755'
+
+    - name: define vm {{ vm_name }}
+      virt:
+          command: define
+          xml: "{{ lookup('template', 'vm-1Disk.j2') }}"
+          uri:  qemu:///session
+
+    - name: Copy vm disk image file
+      copy: 
+        src: "{{ vm_os_disk_file }}"
+        dest: "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2"
+        force: yes  
+        remote_src: yes
+
+    - name: Generate netplan files
+      template:
+        src: "templates/netplan.j2"
+        dest: "/tmp/01-netcfg.yaml"
+      when: 
+        - vm_os_type|string == 'ubuntu'
+        - vm_os_version|string == '1804'
+
+    - name: Generate hosts files
+      template:
+        src: "templates/hosts.ubuntu.j2"
+        dest: "/tmp/hosts"
+      when: 
+        - vm_os_type|string == 'ubuntu'
+
+    - name: Generate hosts files
+      template:
+        src: "templates/hostname.ubuntu.j2"
+        dest: "/tmp/hostname"
+      when: 
+        - vm_os_type|string == 'ubuntu'
+
+    - name: Resize vm disk file
+      command: qemu-img resize "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2" {{ vm_disk_size }}G
+
+    - name: Resize vm filesystem
+      command: virt-customize -a "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2" --run-command /root/disk_buyult.sh
+
+#    - name: Set vm hostname
+#      command: virt-customize -a "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2" --run-command "hostnamectl set-hostname {{ vm_name }}.{{ vm_domain_name }}"
+ 
+    - name: Copy Netplan File to vm
+      command: virt-customize -a "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2" --upload /tmp/01-netcfg.yaml:/etc/netplan --upload /tmp/hosts:/etc --upload /tmp/hostname:/etc
+      when: 
+        - vm_os_type|string == 'ubuntu'
+        - vm_os_version|string == '1804'
+
+    - name: start vm {{ vm_name }}
+      virt:
+        name: "{{ vm_name }}"
+        state: running
+
+
