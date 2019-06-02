@@ -1,4 +1,10 @@
 # Ansible-Libvirt-KVM
-Repository to create Ubuntu 1604/1804 and Centos 7 VM's for ZebraStack and Zebra Bulut Teknolojileri
+Repository to create Ubuntu 1604/1804 and Centos 7 Virtual Machines for ZebraStack and Zebra Bulut Teknolojileri
 
-Qcow2 images are automatically build by Packer.IO
+Update variables.yml and then run the ansible playbook like below
+
+ansible-playbook deploy_vm.yml
+
+Notes:
+* If there are currently defined vm's with same name over the hypervisor then that vm will be redeployed again
+* Qcow2 images are automatically build by HashiCorp's Packer.IO tool

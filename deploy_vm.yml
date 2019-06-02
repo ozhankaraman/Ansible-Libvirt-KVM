@@ -9,6 +9,12 @@
     - name: Make sure that we can connect to the machine
       ping:
 
+    - name: Create temporary build directory
+      tempfile:
+        state: directory
+        suffix: build
+      register: tempfile_1
+
     - name: Query IP Address for {{ vm_name }}.{{ vm_domain_name }}
       set_fact: vm_ip="{{ lookup('dig', '{{ vm_name }}.{{ vm_domain_name }}/A') }}"
 
@@ -61,10 +67,16 @@
         force: yes  
         remote_src: yes
 
+    - name: Resize vm disk file
+      command: qemu-img resize "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2" {{ vm_disk_size }}G
+
+    - name: Resize vm filesystem
+      command: virt-customize -a "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2" --run-command /root/disk_buyult.sh
+
     - name: Generate netplan files
       template:
         src: "templates/netplan.j2"
-        dest: "/tmp/01-netcfg.yaml"
+        dest: "{{ tempfile_1.path }}/01-netcfg.yaml"
       when: 
         - vm_os_type|string == 'ubuntu'
         - vm_os_version|string == '1804'
@@ -72,35 +84,45 @@
     - name: Generate hosts files
       template:
         src: "templates/hosts.ubuntu.j2"
-        dest: "/tmp/hosts"
+        dest: "{{ tempfile_1.path }}/hosts"
       when: 
         - vm_os_type|string == 'ubuntu'
 
     - name: Generate hosts files
       template:
         src: "templates/hostname.ubuntu.j2"
-        dest: "/tmp/hostname"
+        dest: "{{ tempfile_1.path }}/hostname"
       when: 
         - vm_os_type|string == 'ubuntu'
 
-    - name: Resize vm disk file
-      command: qemu-img resize "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2" {{ vm_disk_size }}G
+    - name: Create temp directory for vm's ssh keys
+      file:
+        path: "{{ tempfile_1.path }}/.ssh"
+        state: directory
+        mode: '0755'
 
-    - name: Resize vm filesystem
-      command: virt-customize -a "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2" --run-command /root/disk_buyult.sh
-
-#    - name: Set vm hostname
-#      command: virt-customize -a "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2" --run-command "hostnamectl set-hostname {{ vm_name }}.{{ vm_domain_name }}"
+    - name: Generate SSH Keys for vm 
+      openssh_keypair:
+        path: "{{ tempfile_1.path }}/id_ssh_rsa"
+        comment: "root@{{ vm_name }}.{{ vm_domain_name }}"
+        size: 2048
  
-    - name: Copy Netplan File to vm
-      command: virt-customize -a "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2" --upload /tmp/01-netcfg.yaml:/etc/netplan --upload /tmp/hosts:/etc --upload /tmp/hostname:/etc
+    - name: Copy Netplan and Hosts Files to vm
+      command: virt-customize -a "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2" --upload {{ tempfile_1.path }}/01-netcfg.yaml:/etc/netplan --upload {{ tempfile_1.path }}/hosts:/etc --upload {{ tempfile_1.path }}/hostname:/etc 
       when: 
         - vm_os_type|string == 'ubuntu'
         - vm_os_version|string == '1804'
+
+    - name: Copy SSH Keys into VM
+      command: virt-customize -a "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2" --upload {{ tempfile_1.path }}/id_ssh_rsa:/root/.ssh --upload {{ tempfile_1.path }}/id_ssh_rsa.pub:/root/.ssh
 
     - name: start vm {{ vm_name }}
       virt:
         name: "{{ vm_name }}"
         state: running
 
+    - name: Clean Up temp directory
+      file:
+        path: "{{ tempfile_1.path }}"
+        state: absent
 
