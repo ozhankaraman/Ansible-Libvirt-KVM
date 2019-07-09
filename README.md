@@ -8,3 +8,6 @@ ansible-playbook deploy_vm.yml
 Notes:
 * If there are currently defined vm's with same name over the hypervisor then that vm will be redeployed again
 * Qcow2 images are automatically build by HashiCorp's Packer.IO tool
+
+
+
