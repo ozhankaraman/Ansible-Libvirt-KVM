@@ -2,10 +2,16 @@
 - hosts: fabrika
   gather_facts: False
 
-  vars_files:
-    - variables.yml
-
   tasks:
+
+    #- fail: msg="please add vm hostname to the ansible-playbook like: ansible-playbook deploy_vm.yml -e hostname=vx2"
+    - fail: msg="please add vm hostname to the ansible-playbook like 'ansible-playbook deploy_vm.yml -e hostname=vx2'"
+      when: hostname is not defined
+
+    - name: Load Required Variables From File
+      include_vars:
+        file: variables/{{ hostname }}.yml
+
     - name: Make sure that we can connect to the machine
       ping:
 
@@ -60,18 +66,21 @@
           xml: "{{ lookup('template', 'vm-1Disk.j2') }}"
           uri:  qemu:///session
 
-    - name: Copy vm disk image file
-      copy: 
-        src: "{{ vm_os_disk_file }}"
+    - name: Download disk file from S3 Storage
+      get_url:
+        url: "{{ vm_os_disk_file }}"
         dest: "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2"
-        force: yes  
-        remote_src: yes
+        mode: '0644'
+
+#    - name: Copy vm disk image file
+#      copy: 
+#        src: "{{ vm_os_disk_file }}"
+#        dest: "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2"
+#        force: yes  
+#        remote_src: yes
 
     - name: Resize vm disk file
       command: qemu-img resize "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2" {{ vm_disk_size }}G
-
-    - name: Resize vm filesystem
-      command: virt-customize -a "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2" --run-command /root/disk_buyult.sh
 
     - name: Generate netplan files
       template:
