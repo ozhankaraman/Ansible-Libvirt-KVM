@@ -21,8 +21,8 @@
         suffix: build
       register: tempfile_1
 
-    - name: Query IP Address for {{ vm_name }}.{{ vm_domain_name }}
-      set_fact: vm_ip="{{ lookup('dig', '{{ vm_name }}.{{ vm_domain_name }}/A') }}"
+    - name: Query IP Address for {{ vm_name }}.{{ vm_domain_name }}
+      set_fact: vm_ip="{{ lookup('dig', '{{ vm_name }}.{{ vm_domain_name }}/A') }}"
 
     - name: Parse IP Address for Short IP
       set_fact: vm_ip_short="{{ vm_ip.split('.')[0:3] | join('.') }}"
