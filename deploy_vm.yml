@@ -1,5 +1,5 @@
 ---
-- hosts: kvmt1
+- hosts: kvmt7
   gather_facts: False
 
   tasks:
@@ -24,13 +24,13 @@
         suffix: build
       register: tempfile_1
 
-    - name: Query IP Address for {{ vm_name }}.{{ vm_domain_name }}
-      set_fact: vm_ip="{{ lookup('dig', '{{ vm_name }}.{{ vm_domain_name }}/A') }}"
+    - name: Query IP Address for {{ vm_name }}.{{ vm_domain_name }} 
+      set_fact: vm_ip="{{ lookup('dig', '{{ vm_name }}.{{ vm_domain_name }}', '@{{ vm_dns_server }}') }}"
 
-    - name: Parse IP Address for Short IP
-      set_fact: vm_ip_short="{{ vm_ip.split('.')[0:3] | join('.') }}"
+    - name: Parse IP Address for Short IP {{ vm_ip }}
+      set_fact: vm_ip_short="{{ vm_ip.split('.')[0:3] | join('.') }}"   
 
-    - name: list all VMs {{ vm_ip_kisa }}
+    - name: list all VMs {{ vm_name }}.{{ vm_domain_name }} {{ vm_ip_short }}
       virt:
         command: list_vms
       register: all_vms
@@ -89,7 +89,7 @@
 #        remote_src: yes
 
     - name: Resize vm disk file
-      command: qemu-img resize "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2" {{ vm_disk_size }}G
+      command: qemu-img resize "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2" {{ vm_disk_size }}G
 
     - name: Generate netplan files
       template:
