@@ -6,15 +6,20 @@ network:
   ethernets:
     eth0:
       dhcp4: no
+      dhcp6: no
+{% if vm_network_vlan != '' %}
 
   vlans:
     eth0.{{ vm_network_vlan }}:
       id: {{ vm_network_vlan }}
       link: eth0
       dhcp4: no
+      dhcp6: no
+{% endif %}
       addresses:
           - {{ vm_ip }}/24
       gateway4: {{ vm_ip_short }}.254
       nameservers:
           search: [{{ vm_domain_name }}]
           addresses: [{{ vm_dns_server }}]
+

@@ -1,5 +1,5 @@
 ---
-- hosts: fabrika
+- hosts: kvmt1
   gather_facts: False
 
   tasks:
@@ -12,6 +12,9 @@
       include_vars:
         file: variables/{{ hostname }}.yml
 
+    - set_fact: vm_network_vlan=""
+      when: vm_network_vlan is undefined
+
     - name: Make sure that we can connect to the machine
       ping:
 
@@ -21,8 +24,8 @@
         suffix: build
       register: tempfile_1
 
-    - name: Query IP Address for {{ vm_name }}.{{ vm_domain_name }}
-      set_fact: vm_ip="{{ lookup('dig', '{{ vm_name }}.{{ vm_domain_name }}/A') }}"
+    - name: Query IP Address for {{ vm_name }}.{{ vm_domain_name }}
+      set_fact: vm_ip="{{ lookup('dig', '{{ vm_name }}.{{ vm_domain_name }}/A') }}"
 
     - name: Parse IP Address for Short IP
       set_fact: vm_ip_short="{{ vm_ip.split('.')[0:3] | join('.') }}"
@@ -52,6 +55,12 @@
       virt: 
         name: "{{ vm_name }}"
         command: undefine
+      when: vm_cleanup.0 is defined
+
+    - name: Cleanup old vm directory on os
+      file:
+        path: "{{ vm_dir }}/{{ vm_name }}" 
+        state: absent
       when: vm_cleanup.0 is defined
 
     - name: Create vm base directory if it does not exist
@@ -115,7 +124,7 @@
         path: "{{ tempfile_1.path }}/id_ssh_rsa"
         comment: "root@{{ vm_name }}.{{ vm_domain_name }}"
         size: 2048
- 
+
     - name: Copy Netplan and Hosts Files to vm
       command: virt-customize -a "{{ vm_dir }}/{{ vm_name }}/{{ vm_name }}-vda-{{ vm_disk_size }}.qcow2" --upload {{ tempfile_1.path }}/01-netcfg.yaml:/etc/netplan --upload {{ tempfile_1.path }}/hosts:/etc --upload {{ tempfile_1.path }}/hostname:/etc 
       when: 
@@ -134,4 +143,3 @@
       file:
         path: "{{ tempfile_1.path }}"
         state: absent
-

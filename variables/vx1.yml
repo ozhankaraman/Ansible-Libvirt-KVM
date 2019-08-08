@@ -1,11 +1,11 @@
 ---
 vm_name: vx1
-vm_memory: 785938
-vm_network_bridge: cloudbrx
-vm_network_vlan: 404
+vm_network_bridge: cloudbr404
+#vm_network_vlan: 404
+vm_memory: 512
 vm_cpu: 1
 vm_dir: /vm2
-vm_disk_size: 60
+vm_disk_size: 20
 vm_xml: vm-1Disk.xml.j2
 vm_domain_name: zz.zebrastack.com
 #vm_os_disk_file: /depot/Templates.ZebraStack/ubuntu1804.qcow2
