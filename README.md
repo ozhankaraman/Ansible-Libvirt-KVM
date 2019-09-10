@@ -1,5 +1,5 @@
 # Ansible Libvirt KVM
-Repository to create Ubuntu 1604/1804 and Centos 7 Virtual Machines for ZebraStack and Zebra Bulut Teknolojileri
+Repository to create Ubuntu 1604/1804 and Centos 7 Virtual Machines for ZebraStack and Zebra Bulut 
 
 To deploy a vm named vx2, first we need to create vx2.yml file under variables file and then execute the deploy_vm.yml playbook like below:
 
