@@ -10,4 +10,4 @@ Notes:
 * Qcow2 images are automatically build by HashiCorp's Packer.IO tool
 *
 
-
+apt-get install -y qemu-kvm libvirt-bin bridge-utils libguestfs-tools python-libvirt
